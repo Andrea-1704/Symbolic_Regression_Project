@@ -78,7 +78,7 @@ We introduced three different types of mutation: subtree mutation, hoist mutatio
 - Point mutation: to mutate a node (operator, variable or constant) of the program.
 
 All of these functions are designed to achive a valid mutated solution.
-Hoist and point mutation do not increase the depth of the solution (moreover Hoist mutation could be used to simplify the solutions), while subtree mutation can. To mantain the constraint on the max depth (set to 10) we defined a function called `cut_program` which simply cuts the program if the depth is bigger than the max depth. To do so, we simply replace the subtree with a single number randomly chosen.
+Hoist and point mutation do not increase the depth of the solution (moreover Hoist mutation could be used to simplify the solutions), while subtree mutation can. To mantain the constraint on the max depth (set to 10) we defined a function called `cut_program` which simply cuts the tree if the depth is bigger than the max depth. To do so, we simply replace the subtree with a single number randomly chosen.
 
 
 **Crossover**
@@ -113,6 +113,9 @@ def crossover(parent1, parent2):
 
 In order to avoid bloating, we introduced a function called `cut_program` that recursively travels the tree that represents the program and substitutes one or more subtrees with a constant if the depth is too high after mutation or crossover.  
 
+We also tried many other techniques to avoid bloating, the main one has been to consider the depth of a solution directly inside the fitness function. But, since different program show different scales of MSE, it was difficult to reason a good and "general" penalty due to the "complexity" of the solution.
+
+At the end, the best  seems to be to limit directly the depth of a program after any function that could have increased the depth.
 
 
 
