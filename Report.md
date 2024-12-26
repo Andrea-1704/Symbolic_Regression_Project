@@ -83,7 +83,30 @@ Hoist and point mutation do not increase the depth of the solution (moreover Hoi
 
 **Crossover**
 
+The croossover function is designed to receive only 2 parents and, if one of them is a leaf program simply return casually one of the 2 programs (avoiding to perform the operation for programs with no childrens). Otherwise, select random indexes for both the parents and combine the first part of the tree with the second part of the tree of the 2 parents, returning a new individual.
 
+In order to avoid bloating, the tree is cut if its depth is greater than MAX_TREE_DEPTH.
+
+A snapshot of the code is provided to better describe the used aproach:
+```python 
+def crossover(parent1, parent2):
+    """Crossover by subtree swapping."""
+    #Obtain a casual subtree from parents
+    subtree1, parent1_info = get_subtree(parent1)
+    subtree2, _ = get_subtree(parent2)
+
+    if parent1_info is None:
+        # A subtree of parent2 is returned, 
+        # no risk of having more than MAX_TREE_DEPTH
+        return subtree2
+    else:
+        # Subtree swapping and check on the final depth
+        parent, idx = parent1_info
+        parent[idx] = subtree2
+        if(depth(parent)>MAX_TREE_DEPTH): #Cut the program only if necessary
+            return cut_program(parent) 
+        return parent
+```
 
 
 **Avoiding bloating**  
