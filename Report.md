@@ -73,9 +73,12 @@ Implementing a fitness hole as described can actually be beneficial in overcomin
 **Mutation**
 We introduced three different types of mutation: subtree mutation, hoist mutation and point mutation.
 
-- Subtree mutation: 
-- Hoist mutation: 
-- Point mutation: 
+- Subtree mutation: mutates a subtree with another one randomly generated;
+- Hoist mutation: to replace a subtree with a smaller one within the selected subtree;
+- Point mutation: to mutate a node (operator, variable or constant) of the program.
+
+All of these functions are designed to achive a valid mutated solution.
+Hoist and point mutation do not increase the depth of the solution (moreover Hoist mutation could be used to simplify the solutions), while subtree mutation can. To mantain the constraint on the max depth (set to 10) we defined a function called `cut_program` which simply cuts the program if the depth is bigger than the max depth. To do so, we simply replace the subtree with a single number randomly chosen.
 
 
 **Crossover**
