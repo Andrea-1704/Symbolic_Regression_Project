@@ -4,7 +4,7 @@ The entire project has been done in collaboration with __name__
 
 **Genotype**  
 
-We decided to represent formulas through a tree with a maximum depth of 10 in order to avoid bloating, a phenomena that makes formulas grow generation after generation with small changes in fitness.  
+We decided to represent formulas through a tree with a maximum depth of 8 in order to avoid bloating, a phenomena that makes formulas grow generation after generation with small changes in fitness.  
 The tree is represented with a list of lists, where, depending on the number of operands taken by the operation, the structure is:  
 - `[operator, [first_operand], [second_operand]]` if it is a binary operation;
 - `[operator, [operand]]` if it takes only one operand.  
@@ -44,12 +44,42 @@ At the beginning we also tried to associate different probabilities to each oper
 
 Our individual is represented by a genome and the corresponding fitness. In order to do so, we used dataclass to ensure that the fitness is computed only once when the individual is generated or mutated and then used in different steps of the algorithm.  
 
-**Initial population**  
+# Initial population
 
-Before that the EA algorithm effectively starts to run, the initial population has to be generated. In order to do so, we designed a function called `generate_program()` that takes as argument the input dimension. Then, for each dimension, it generates a random tree (calling `random_program()` ) for each dimension with a max_depth=2 and combines through randomly selected operations all the subtrees to generate the final tree.  
+Before the EA algorithm effectively starts to run, the initial population has to be generated. In order to do so, we designed a function called `generate_program()` that takes as argument the input dimension. Then, for each dimension, it generates a random tree (calling `random_program()` ) for each dimension with a max_depth=2 and combines through randomly selected operations all the subtrees to generate the final tree.  
 This allows an initial population where there is a lot of genetic material related to all the dimensions of the problem and we can create more different combinations. 
 
-**Evolutionary algorithm**
+## Initial Population Generation
+
+When we embarked on the development of our evolutionary algorithm for symbolic regression, we understood that the cornerstone of any successful evolutionary process is a well-conceived initial population. This is where our function, `random_program()`, plays a crucial role. Designed with recursion at its core, this function meticulously crafts each individual in the population as a unique expression tree.
+
+### The Art of Recursive Tree Construction
+
+The recursive nature of `random_program()` allows us to construct complex symbolic expressions in a controlled and systematic manner. Each call to the function has the potential to delve deeper into the tree, adding layers of mathematical operations and operands until a specified maximum depth is reached or a random condition prompts a halt.
+
+- **Controlling Complexity with Depth**: The recursion depth parameter is a tool that we wield to balance the complexity of the expressions. By setting a maximum depth, we prevent the trees from becoming unwieldy, which is vital for maintaining the interpretability of the models and avoiding overfitting.
+
+- **Deciding When to Stop**: At each recursive invocation, there's a 30% chance that the function will decide to generate a leaf node instead of continuing deeper. This stochastic element introduces variety in the depth across the population, ensuring that not all trees reach the maximum depth. It is a subtle yet powerful way to introduce randomness into the population, encouraging diversity.
+
+- **The Genesis of Leaf Nodes**: When the recursion reaches its terminus—either because the maximum depth has been reached or the random chance triggers it—the function generates a leaf node. This node could be:
+  - **A Variable**: If there are input variables that haven’t been used yet, and a subsequent 70% chance is met, a variable is selected. This choice is strategic, ensuring that each variable has a chance to contribute to the formula, thus exploiting the full informational potential of the input data.
+  - **A Constant**: Constants are the unsung heroes in these trees, providing stability and adding an element of fixed numerical value that complements the dynamic nature of the variables.
+
+### Selecting the Right Operators and Operands
+
+- **Operator Selection**: The decision on which mathematical operator to use is not taken lightly. Each operator adds a different dimension to the problem-solving capabilities of the tree. Whether it's a basic operation like addition or multiplication, or a more complex function like sine or logarithm, the choice is made randomly but with equal probability to maintain uniformity in operator distribution.
+
+- **Recursive Operand Generation**: For nodes that are not leaves, the selected operator determines the number of operands. The function then recursively calls itself for each operand required, decrementing the depth with each call. This is where the true complexity of the tree is built, combining simplicity and complexity in a delicate dance that defines the nature of each individual expression tree.
+
+### Why a Large Initial Population?
+
+We typically start with a large initial population (1000 individuals). This breadth is not merely a number but a strategy to ensure that we cover as much of the solution space as possible right from the outset. It guards against the algorithm prematurely converging to suboptimal solutions and fosters robust evolutionary dynamics.
+
+
+
+
+
+# Evolutionary algorithm
 
 For what concerns the evolutionary algorithm, we decided to use a steady-state model where the offspring is added to the population, then they compete against parents for survival.  
 We also tried, at the beginning, to use a generational model with the elitist strategy, but this strategy was less effective than the chosen one. 
@@ -66,7 +96,7 @@ When the offspirng has been generated, the population is extended with the offsp
 
 **Parent selection**    
 
-We implemented torunament selection with fitness hole for selecting parents in order to generate the offspring. Starting from the initial population, tau=10 members are randomly selected and a tournament among them is performed. With a 90% probability, the best out of these tau individual is returned. The remaining times, the less fit individual is returned.  
+We implemented tournament selection with __fitness hole__ for selecting parents in order to generate the offspring. Starting from the initial population, tau=10 members are randomly selected and a tournament among them is performed. With a 90% probability, the best out of these tau individuals is returned. The remaining times, the less fit individual is returned.  
 Implementing a fitness hole as described can actually be beneficial in overcoming the challenges posed by an adaptive change that requires multiple intermediate steps. By intentionally allowing less fit individuals a chance to win, fitness holes can help navigate the evolutionary pathway where direct progression is hindered by intermediate steps that reduce overall fitness. This approach ensures that even though the final adaptation is advantageous, the evolutionary path to achieve it can successfully bypass 'fitness holes' that would otherwise deselect the intermediates before the final adaptation is achieved.
 
 
