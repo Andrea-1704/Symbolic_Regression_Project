@@ -65,6 +65,40 @@ The recursive nature of `random_program()` allows us to construct complex symbol
   - **A Variable**: If there are input variables that haven’t been used yet, and a subsequent 70% chance is met, a variable is selected. This choice is strategic, ensuring that each variable has a chance to contribute to the formula, thus exploiting the full informational potential of the input data.
   - **A Constant**: Constants are the unsung heroes in these trees, providing stability and adding an element of fixed numerical value that complements the dynamic nature of the variables.
 
+A snapshot of the code is provided to provide all the needed details of th random_program function:
+```python
+def random_program(depth,input_dim,unary=False, used_indices=None):
+    if used_indices is None:
+        used_indices = set()
+
+    # Base case: generate a leaf node
+    #If you already used all the variables, you can only use constants and return: don't place an operation between costants
+    if depth == 0 or (random()<0.3) or len(used_indices) == input_dim:
+        if len(used_indices) < input_dim and random()<0.7:
+            available_indices = list(set(range(input_dim)) - used_indices)
+            index = choice(available_indices)
+            used_indices.add(index)
+            return f"x[{index}]", used_indices
+        else: 
+            #Only positive float between 0 and 10, no need to include negative ones, we have the subtraction operation
+            return str(round(uniform(2, 10),2)), used_indices
+     #Condition to check that we do not nest unary operations     
+    if(not unary):
+        operations = OPERATIONS
+        weights = WEIGHTS
+    else:
+        operations = OPERATIONS_BINARY
+        weights = BINARY_WEIGHTS
+    op, arity, symbol,p = choices(operations,weights=weights, k=1)[0]
+    if(unary != True):
+        unary = arity==1
+    children = []
+    for _ in range(arity):
+        child, used_indices = random_program(depth - 1, input_dim, unary, used_indices)
+        children.append(child)
+    return [symbol] + children,used_indices
+```
+
 ### Selecting the Right Operators and Operands
 
 - **Operator Selection**: The decision on which mathematical operator to use is not taken lightly. Each operator adds a different dimension to the problem-solving capabilities of the tree. Whether it's a basic operation like addition or multiplication, or a more complex function like sine or logarithm, the choice is made randomly but with equal probability to maintain uniformity in operator distribution.
@@ -100,7 +134,7 @@ We implemented tournament selection with __fitness hole__ for selecting parents 
 Implementing a fitness hole as described can actually be beneficial in overcoming the challenges posed by an adaptive change that requires multiple intermediate steps. By intentionally allowing less fit individuals a chance to win, fitness holes can help navigate the evolutionary pathway where direct progression is hindered by intermediate steps that reduce overall fitness. This approach ensures that even though the final adaptation is advantageous, the evolutionary path to achieve it can successfully bypass 'fitness holes' that would otherwise deselect the intermediates before the final adaptation is achieved.
 
 
-**Mutation**
+## Mutation
 We introduced three different types of mutation: subtree mutation, hoist mutation and point mutation.
 
 - Subtree mutation: mutates a subtree with another one randomly generated;
@@ -108,10 +142,217 @@ We introduced three different types of mutation: subtree mutation, hoist mutatio
 - Point mutation: to mutate a node (operator, variable or constant) of the program.
 
 All of these functions are designed to achive a valid mutated solution.
-Hoist and point mutation do not increase the depth of the solution (moreover Hoist mutation could be used to simplify the solutions), while subtree mutation can. To mantain the constraint on the max depth (set to 10) we defined a function called `cut_program` which simply cuts the tree if the depth is bigger than the max depth. To do so, we simply replace the subtree with a single number randomly chosen.
+Hoist and point mutation do not increase the depth of the solution (moreover Hoist mutation could be used to simplify the solutions), while subtree mutation can. To mantain the constraint on the max depth (set to 8) we defined a function called `cut_program` which simply cuts the tree if the depth is bigger than the max depth. To do so, we simply replace the subtree with a single number randomly chosen.
+
+### Subtree mutation
+
+The function begins by assigning the input `program` to `mutant`. This assignment assumes that a deep copy of `program` is unnecessary as it is managed outside the function, ensuring that the original program remains unaltered unless explicitly modified within this function.
+
+#### Conditional Expansion
+- The function first checks if the tree's depth is less than or equal to 4. If this condition is met and a randomly generated number is below 0.6, the tree is considered for expansion to increase its complexity:
+  - A binary operation is randomly selected from `OPERATIONS_BINARY`, with the selection influenced by predefined weights (`BINARY_WEIGHTS`).
+  - A new subtree is generated using `generate_program(input_dim)`, which creates a fresh symbolic expression based on the provided input dimension.
+  - This new subtree is then combined with the original program under the selected binary operation, effectively creating a more complex tree structure.
+
+#### Mutation Point Selection
+- If the tree does not expand, the function identifies potential mutation points within the tree using `get_subtree_points_recursive(program)`. These points represent nodes in the tree where new subexpressions can be introduced.
+- If no points are available (indicative of a simplistic program structure, possibly a single node), a completely new program is generated as a replacement.
+
+#### Inserting New Subtrees
+- A point for mutation is randomly selected from the available points.
+- A new subtree is then created with `random_program(randint(1, max_depth), input_dim)[0]`, specifying a random depth within allowable limits to ensure diversity.
+- This new subtree replaces the existing subtree at the chosen mutation point using `set_subtree_at_path(mutant, point, new_subtree)`, altering the program's structure.
+
+#### Depth Control and Program Trimming
+- After mutation, the depth of the mutant is checked. If it exceeds the maximum permissible depth (`MAX_TREE_DEPTH`), the program is trimmed using `cut_program(mutant)`. This function simplifies the tree by replacing deeper nodes with simpler constructs, such as constants, to maintain manageability and avoid overfitting.
+
+This mutation function is designed to balance between introducing sufficient genetic diversity and maintaining the structural integrity and complexity of the symbolic expressions. It plays a vital role in the evolutionary dynamics by enabling adaptive changes that can lead to the discovery of more optimal solutions.
+
+Notice that this is the only function for which an explicit call to the `cut_program` is needed to mantain valid the constraint on the depth of the tree.
+
+```python
+def mutate(program, input_dim, max_depth=2):
+    """Mutation of a program."""
+    mutant = program #the deep copy is done when passing the program when the function is called
+    #If the program has a depth lower equal than 2, increase it
+    if(depth(program)<=4 and random()<0.6):
+        #randomly select a binary operation
+        _, _, symbol,_ = choices(OPERATIONS_BINARY,weights=BINARY_WEIGHTS, k=1)[0]
+        #generate a program
+        new_subtree = generate_program(input_dim)
+        #Combine the two programs
+        return [symbol] + [program, new_subtree]
+    points = get_subtree_points_recursive(program)
+    if not points:
+        return generate_program(input_dim)
+    
+    point = choice(points)
+    new_subtree = random_program(randint(1,max_depth), input_dim)[0]
+
+    mutant = set_subtree_at_path(mutant, point, new_subtree)
+    if(depth(mutant)>MAX_TREE_DEPTH):
+        mutant = cut_program(mutant)
+    return mutant
+```
 
 
-**Crossover**
+### Hoist mutation
+
+This function implements the hoist mutation within our evolutionary algorithm for symbolic regression. Hoist mutation is a method of simplifying the structure of a program tree by replacing it with one of its subtrees, effectively reducing its complexity and potentially improving its fitness by eliminating unnecessary parts.
+
+#### Obtaining a Random Subtree
+- The process begins by selecting a random subtree from the given program using the `get_subtree` function. This function also returns `parent_info`, which includes references to the parent of the subtree and the index where this subtree is attached, facilitating easy replacement.
+
+#### Handling Leaf Nodes
+- If the selected subtree is a leaf (i.e., not a list but a single node like a variable or a constant), the mutation cannot proceed because a leaf node does not contain any inner structures to promote to the higher level. In this case, the original program is returned unchanged, as hoist mutation is not applicable.
+
+#### Replacing with Inner Subtree
+- If the subtree is not a leaf, the function attempts to go deeper into the structure:
+  - Another random subtree (`inner_subtree`) is selected from within the first subtree. This selection aims to find a deeper part of the tree that can be used to replace the higher-level structure.
+  
+#### Applying the Mutation
+- Depending on the availability of `parent_info`:
+  - If `parent_info` is `None`, it indicates that the selected subtree is the root of the program. In this case, the entire program is replaced with the `inner_subtree`. This can significantly simplify the program if the `inner_subtree` is substantially smaller than the original.
+  - If `parent_info` is not `None`, the function retrieves the `parent` and the `idx` (index) from `parent_info`. The `inner_subtree` replaces its original position in the parent, thus hoisting the inner structure to a higher level in the overall tree.
+
+This mutation method is particularly useful for reducing program complexity and avoiding bloat in genetic programming environments. By simplifying the program structure, hoist mutation can lead to more general solutions that may perform better on unseen data, contributing to the overall effectiveness of the evolutionary process.
+
+
+```python
+def hoist_mutation(program):
+    """Mutation of a program through hoist"""
+    # Obtein a random subtree
+    subtree, parent_info = get_subtree(program)
+    
+    if not isinstance(subtree, list):
+        # If the subtree is a leaf, return the program, hoist cannot be done
+        return program
+
+    # Get the inner subtree
+    inner_subtree, _ = get_subtree(subtree)
+
+    if parent_info is None:
+        # Sobstitute the program with the inner subtree
+        return inner_subtree
+    else:
+        # Sobstitute the parent with the inner subtree
+        parent, idx = parent_info
+        parent[idx] = inner_subtree
+        return program
+```
+
+
+### Point mutation
+
+The `point_mutation` function is designed to introduce subtle changes at a single node within the symbolic expression tree, which represents a program. This type of mutation is fundamental for exploring slight variations in the genetic material, potentially leading to incremental improvements in the program's performance.
+
+#### Overview of Functionality
+- **Program**: The input to the function, represented as a nested list that reflects the tree structure of the symbolic program.
+- **Max Tree Depth**: Specifies the maximum depth the tree can have, preventing the mutation from producing overly complex trees.
+
+#### Mutation Process
+The mutation process involves several helper functions, each tailored to handle specific parts of the mutation:
+
+1. **Collecting Variables**:
+   - `collect_variables(node, variables)`: This function recursively collects all the variable names used in the program, which are essential for potentially mutating variable nodes to other existing variables within the program.
+
+2. **Mutating Leaf Nodes**:
+   - `mutate_leaf(node)`: Targets leaf nodes (constants or variables) for mutation.
+     - For variables (strings starting with 'x'), the function randomly selects a new variable from the set of all variables collected in the program.
+     - For constants, it generates a new random constant within a specified range (-10 to 10, adjustable).
+
+3. **Mutating Operator Nodes**:
+   - `mutate_operator(node)`: Changes the operator at a node. It selects a new operator with the same arity (number of arguments) from the available operations, ensuring the structural integrity of the tree is maintained.
+
+4. **Recursive Tree Traversal and Mutation Application**:
+   - `recursive_mutation(node, current_depth)`: This is the core function that traverses the tree recursively.
+     - If the current depth reaches the maximum allowed depth or the node is a leaf, it mutates the leaf node.
+     - Otherwise, it randomly decides either to mutate the current operator node or to continue the recursion into one of the child nodes. This decision is based on a 30% chance to mutate the current node, with the rest leading to further recursive mutation.
+
+#### Execution of Mutation
+- The program tree is deeply copied at the beginning to preserve the original during mutation.
+- The `recursive_mutation` function is then called with the root of the program tree, starting the mutation process from the top of the tree down to the leaves, applying changes as dictated by the tree structure and mutation rules.
+
+#### Significance of Point Mutation
+Point mutation is crucial for fine-tuning solutions within the population. By making small, targeted changes, it allows the evolutionary algorithm to explore the solution space around the current points, potentially discovering better performing solutions through minor adjustments. This mutation type is particularly effective for adjusting well-performing individuals that might only need slight modifications to optimize their performance.
+
+This function, by varying the genetic structure of the programs slightly, ensures a continuous and diverse exploration of the solution space, which is essential for the success of the evolutionary process in symbolic regression.
+
+```python
+def point_mutation(program, max_tree_depth=MAX_TREE_DEPTH):
+    """
+    Perform a point mutation on the given program.
+
+    Parameters:
+    - program: list
+        The symbolic program represented as a nested list (tree structure).
+    - max_tree_depth: int
+        Maximum depth allowed for the tree.
+
+    Returns:
+    - mutated_program: list
+        A new program with a randomly mutated node.
+    """
+
+    #let's define a function that tell us the variables inside the program:
+    def collect_variables(node, variables):
+        """Collect all variable names in the program."""
+        if isinstance(node, str) and node.startswith('x'):
+            variables.add(node)
+        elif isinstance(node, list):
+            for child in node:
+                collect_variables(child, variables)
+        
+
+    def mutate_leaf(node):
+        """Mutate a leaf node (constant or variable)."""
+        if isinstance(node, str):
+            # Variable mutation: Switch to another variable or a random constant that is present in 
+            #the current program:
+            if node.startswith('x'):
+                # Collect variables from the program.
+                variables = set()
+                collect_variables(program, variables)
+                return choice(list(variables))
+            else:
+                #Replace with a new random constant.
+                #for now i consider only between -10 and 10, but we can change it
+                return str(round(uniform(-10, 10), 2))
+        return node
+
+    def mutate_operator(node):
+        """Mutate an operator node."""
+        arity = len(node) - 1
+        #perations by matching arity
+        valid_ops = [op for op in OPERATIONS if op[1]==arity]
+    
+        new_op = choice(valid_ops)
+        node[0] = new_op[2]  # Replace operator symbol.
+
+    def recursive_mutation(node, current_depth):
+        """Recursively traverse the tree and apply mutation."""
+        if current_depth >= max_tree_depth or not isinstance(node, list):
+            # Mutate a leaf node if max depth reached or node is a leaf.
+            return mutate_leaf(node)
+
+        if isinstance(node, list):
+            # Decide whether to mutate this operator or recurse further
+            if random() < 0.3:  # 30% chance to mutate this operator but if yoi prefer we can change
+                mutate_operator(node)
+            else:
+                # Recursively mutate a random child
+                child_idx = randint(1, len(node) - 1)
+                node[child_idx] = recursive_mutation(node[child_idx], current_depth + 1)
+
+        return node
+
+    mutated_program = copy.deepcopy(program)
+    return recursive_mutation(mutated_program, current_depth=0)
+```
+
+
+
+## Crossover
 
 The croossover function is designed to receive only 2 parents and, if one of them is a leaf program simply return casually one of the 2 programs (avoiding to perform the operation for programs with no childrens). Otherwise, select random indexes for both the parents and combine the first part of the tree with the second part of the tree of the 2 parents, returning a new individual.
 
