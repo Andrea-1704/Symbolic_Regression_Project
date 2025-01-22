@@ -23,3 +23,4 @@ def f7(x: np.ndarray) -> np.ndarray:
 
 def f8(x: np.ndarray) -> np.ndarray:
     return ((((np.tan(-7.77) / np.exp(x[5])) * 7.84) + ((x[5] * 9.348939228632076) * ((np.cos((x[5] * 7.411006314670986)) + np.exp(x[5])) * ((x[5] + 5.376030842358552) / 4.390448716336096)))) + (np.tan(-7.77) / np.exp(x[5])))
+
