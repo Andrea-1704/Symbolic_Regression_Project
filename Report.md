@@ -400,3 +400,15 @@ At the end, the best  seems to be to limit directly the depth of a program after
 
 
 
+# Obtained results
+In the following table is contained the result obtained for each of the problems:
+| Problem | MSE                             |
+|---------|---------------------------------|
+| 1       | 7.125940794232773e-34           |
+| 2       | 15446265142300.896              |
+| 3       | 25.49                           |
+| 4       | 0.00019559818341485772          |
+| 5       | 6.809496430284369e-20           |
+| 6       | 5.290194619091552e-07           |
+| 7       | 199.7                           |
+| 8       | 614461.4967978377               |
