@@ -99,6 +99,15 @@ def random_program(depth,input_dim,unary=False, used_indices=None):
     return [symbol] + children,used_indices
 ```
 
+We have designed this function to have the following properties:
+
+1. **Use of Input Dimensions:** The function uses a list, `used_indices`, to track which input dimensions (e.g., `0,1`, etc.) have been utilized in the formula. This ensures comprehensive coverage of all available input variables (if the depth makes it possible), making the formula relevant to all dimensions of the input data.  
+
+2. **Restrictions on Trigonometric Functions:** To enhance the mathematical sensibility of the formulas generated, the function includes a specific constraint regarding the nesting of trigonometric functions. Once a trigonometric function (such as `sin`, `cos`, etc.) is used, the function prohibits the inclusion of another trigonometric function within it. This constraint helps in preventing mathematically nonsensical expressions like `sin(cos(tan(x)))`, which, while computationally valid, may not be practically meaningful or may complicate the interpretation and analysis of the formula.
+3. **Restrictions on operations with constants:** It is not allowed, in the current implementation, to add binary operations between constants. This is another kind of operation that makes the depth of the tree increase without the generation of a real meaningful formula.
+
+This approach not only ensures that each formula is robust and contextually appropriate but also maintains clarity and reduces the computational redundancy that might arise from nested trigonometric operations. Such constraints are particularly important in scientific computing and simulations where the accuracy and interpretability of mathematical expressions are critical.
+
 ### Selecting the Right Operators and Operands
 
 - **Operator Selection**: The decision on which mathematical operator to use is not taken lightly. Each operator adds a different dimension to the problem-solving capabilities of the tree. Whether it's a basic operation like addition or multiplication, or a more complex function like sine or logarithm, the choice is made randomly but with equal probability to maintain uniformity in operator distribution.
