@@ -32,9 +32,9 @@ float(np.mean(np.abs((y - predictions) / y)) *100)
 
 When using MAPE (Mean Absolute Percentage Error) and MSE (Mean Squared Error) as fitness measures in symbolic regression, discrepancies between these metrics were observed. MAPE measures the relative percentage error between predicted and actual values, making it highly sensitive to errors on samples with small actual values. In contrast, MSE measures the average squared error and is heavily influenced by errors on large values because the errors are squared.
 
-In practice, this means that if your predictive formula is inaccurate on samples with large actual values, it could result in a low MSE (if errors are uniformly distributed across small and large values) while the MAPE could be high if most of the relative errors occur on samples with small actual values.
+In practice, this means that if your predictive formula is inaccurate on samples with large actual values, it could result in a low MSE (if errors are uniformly distributed across small and large values) while the MAPE could be high even if most of the relative errors occur on samples with small actual values.
 
-This is the reason why, at the end, we decided to use the MSE as fitness and we didn't introduce other measures: our objective was exactly to minimize that value for the final evaluation. So, it doesn't matter if it has different values depending on the problem, it is simply related to the scale and the MAPE can be printed as used to have an idea of the performance of the algorithm. Moreover, given the aforementioned difference in scale, we decided to remove the penalization term that we had at the beginning in the fitness regarding the length of the formula. Our algorithm is already checking that the maximum depth is below 10 for every mutation and after the crossover, so we noticed no advantage in penalizing formulas based on the length.
+This is the reason why, at the end, we decided to use the MSE as fitness and we didn't introduce other measures: our objective was exactly to minimize that value for the final evaluation. So, it doesn't matter if it has different values depending on the problem, it is simply related to the scale and the MAPE can be printed to have an idea of the performance of the algorithm. Moreover, given the aforementioned difference in scale, we decided to remove the penalization term that we had at the beginning in the fitness regarding the length of the formula. Our algorithm is already checking that the maximum depth is below 8 for every mutation and after the crossover, so we noticed no advantage in penalizing formulas based on the length.
 
 On the other hand, we had to penalize programs with errors (a negative argument to the logarithm, for instance). We simply did it by setting the fitness to infinite in that case, in a way that the formula is discarded by the evolutionary process itself.
 
@@ -44,7 +44,7 @@ We have conducted several trials concerning the choice of operations. In this co
 
 Our operation set, following the second strategy, includes: addition, subtraction, division, multiplication and power as binary operations, while we had sin,cos,exp log and sqrt as unary operations.
 
-At the beginning we also tried to associate different probabilities to each operation, in a way that sum and subtraction were picked more with respect to sin and cosine, for example. However, we now consider all of them with the same probability because, after many trials, we have noticed that this is more effective.
+At the beginning we also tried to associate different probabilities to each operation, in a way that sum and subtraction were picked more with respect to sin and cosine, for example. However, we now consider all of them with the same probability because, after many trials, we have noticed that this is more effective to introduce more randomness.
 
 **Individual**
 
@@ -89,7 +89,7 @@ defrandom_program(depth,input_dim,unary=False, used_indices=None):
 
     #If you already used all the variables, you can only use constants and return: don't place an operation between costants
 
-    if depth ==0or (random()<0.3) orlen(used_indices) == input_dim:
+    if depth ==0 or (random()<0.3) orlen(used_indices) == input_dim:
 
         iflen(used_indices) < input_dim andrandom()<0.7:
 
@@ -185,6 +185,8 @@ Implementing a fitness hole as described can actually be beneficial in overcomin
 
 ## Mutation
 
+Before introducing the mutations and crossover techniques we used, we would like to acknowledge that we drew inspiration from the gplearn library. Although our implementation differs in several aspects, we aimed to incorporate hoist mutation and point mutation after recognizing their effectiveness. Regarding crossover, our approach deviates significantly, as our fitness function and tree structure differ from those used in gplearn.
+
 We introduced three different types of mutation: subtree mutation, hoist mutation and point mutation.
 
 - Subtree mutation: mutates a subtree with another one randomly generated;
@@ -236,7 +238,7 @@ defmutate(program, input_dim, max_depth=2):
 
     #If the program has a depth lower equal than 2, increase it
 
-    if(depth(program)<=4andrandom()<0.6):
+    if(depth(program)<=4 and random()<0.6):
 
         #randomly select a binary operation
 
