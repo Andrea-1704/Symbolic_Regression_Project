@@ -1,4 +1,4 @@
-# Project-work: symbolic regression
+# Symbolic regression
 
 The objective of the algorithm developed is, given a set of inputs x and the corresponding output y, to evolve a formula that best fits them. In order to do so, we developed an evolutionary algorithm that is described in the following.
 
